@@ -48,7 +48,8 @@ Actions 탭 → **ticket-monitor** → **Run workflow** 를 한 번 눌러주면
 | `PLAY_SEQS` | `001,002` | 감시할 회차 (콤마 구분) |
 | `PLAY_SEQ_LABELS` | 9/12 2PM/7PM | 회차 라벨 JSON |
 | `POLL_INTERVAL` | `10` | 폴링 주기(초) |
-| `HEARTBEAT_HOURS` | `6` | N시간마다 생존신고 메시지 (0=끔) |
+| `HEARTBEAT_HOURS` | `0` | N시간마다 생존신고 메시지 (0=끔) |
+| `STARTUP_NOTIFY` | `1` | 시작 시 첫 조회 결과 발송 — 잡이 ~5시간마다 교체되므로 이것이 생존신고 역할 (0=끔) |
 
 ## 로컬에서 돌리기 (선택)
 

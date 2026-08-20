@@ -16,6 +16,7 @@
   POLL_INTERVAL       폴링 주기(초, 기본 10)
   MAX_RUNTIME_MIN     이 시간(분)이 지나면 정상 종료. 0 = 무한 (기본 0)
   HEARTBEAT_HOURS     N시간마다 생존 신고 메시지. 0 = 끔 (기본 0)
+  STARTUP_NOTIFY      시작 시 첫 조회 결과를 텔레그램으로 발송. 1=켬 (기본 1)
 """
 
 import json
@@ -40,6 +41,7 @@ PLAY_SEQ_LABELS = json.loads(
 POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL", "10"))
 MAX_RUNTIME_MIN = float(os.environ.get("MAX_RUNTIME_MIN", "0"))
 HEARTBEAT_HOURS = float(os.environ.get("HEARTBEAT_HOURS", "0"))
+STARTUP_NOTIFY = os.environ.get("STARTUP_NOTIFY", "1") == "1"
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
@@ -116,6 +118,23 @@ def main() -> int:
         f"모니터 시작: {GOODS_NAME} (goods={GOODS_CODE}, 회차={PLAY_SEQS}, "
         f"주기={POLL_INTERVAL:.0f}초)"
     )
+
+    # 시작 알림: 첫 조회 결과를 함께 보내서, 이 실행 환경에서 인터파크 조회와
+    # 텔레그램 발송이 모두 정상인지 즉시 확인할 수 있게 한다.
+    if STARTUP_NOTIFY:
+        parts = []
+        for seq in PLAY_SEQS:
+            try:
+                remain = fetch_remain(seq)
+                total = sum(int(r.get("remainCnt") or 0) for r in remain)
+                parts.append(f"  · {seat_label(seq)}: {total}석")
+            except Exception as e:  # noqa: BLE001
+                parts.append(f"  · {seat_label(seq)}: 조회 실패 ({e})")
+        send_telegram(
+            f"🚀 모니터 시작 — {GOODS_NAME}\n"
+            + "\n".join(parts)
+            + f"\n({POLL_INTERVAL:.0f}초 간격 감시 중)"
+        )
 
     while True:
         if deadline and time.monotonic() >= deadline:
