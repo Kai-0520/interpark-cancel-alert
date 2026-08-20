@@ -1,0 +1,41 @@
+name: ticket-monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub Actions 잡은 최대 6시간 → 5시간마다 새 잡을 띄워 이어받는다.
+    # (크론은 정시 부하를 피하려고 :17분에 실행. 지연/누락될 수 있어
+    #  아래 self re-dispatch 스텝이 백업 역할을 한다.)
+    - cron: "17 */5 * * *"
+
+permissions:
+  actions: write
+
+# 새 잡이 뜨면 기존 잡을 취소해서 항상 1개만 돌게 한다
+concurrency:
+  group: ticket-monitor
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run monitor (max 5h50m)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MAX_RUNTIME_MIN: "350"
+          POLL_INTERVAL: "10"
+          HEARTBEAT_HOURS: "6"
+        run: python3 monitor.py
+
+      # 크론이 누락돼 스크립트가 시간제한으로 정상 종료한 경우,
+      # 스스로 다음 런을 예약해서 공백 없이 이어지게 한다.
+      - name: Re-dispatch self
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run monitor.yml --ref "${{ github.ref_name }}" -R "${{ github.repository }}"
