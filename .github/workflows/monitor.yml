@@ -29,9 +29,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MAX_RUNTIME_MIN: "350"
           POLL_INTERVAL: "10"
-          # 잡이 ~5시간마다 교체되며 시작 알림(첫 조회 결과 포함)이 오므로
-          # 그것이 생존 신고 역할을 한다. 별도 하트비트는 끔.
           HEARTBEAT_HOURS: "0"
+          # 취소표 알림만 받기 위해 잡 교체 시 시작 알림도 끔
+          STARTUP_NOTIFY: "0"
         run: python3 monitor.py
 
       # 크론이 누락돼 스크립트가 시간제한으로 정상 종료한 경우,
