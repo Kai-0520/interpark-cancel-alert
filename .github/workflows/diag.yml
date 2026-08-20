@@ -1,0 +1,27 @@
+name: diag
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe Interpark API from runner
+        run: |
+          echo "--- runner public IP ---"
+          curl -s https://api.ipify.org || true
+          echo
+          echo "--- REMAINSEAT probe ---"
+          for i in 1 2 3; do
+            curl -s -D - -o body.txt -w "HTTP %{http_code}, %{time_total}s\n" \
+              -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36" \
+              -H "Accept: application/json" \
+              -H "Referer: https://tickets.interpark.com/goods/26011954" \
+              --max-time 20 \
+              "https://api-ticketfront.interpark.com/v1/goods/26011954/playSeq/PlaySeq/001/REMAINSEAT" || echo "curl exit: $?"
+            echo "--- body (first 500 bytes) ---"
+            head -c 500 body.txt; echo
+            sleep 3
+          done
