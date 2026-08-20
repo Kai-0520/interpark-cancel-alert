@@ -28,8 +28,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           MAX_RUNTIME_MIN: "350"
-          # 10초 폴링이 인터파크 WAF의 데이터센터 IP 차단을 유발해서 완화
-          POLL_INTERVAL: "60"
+          # 10초 폴링이 인터파크 WAF의 데이터센터 IP 차단을 유발했었음.
+          # 평상시 30초, 연속 실패 시 5분 간격 백오프로 자동 전환(monitor.py)
+          POLL_INTERVAL: "30"
+          BACKOFF_INTERVAL: "300"
           HEARTBEAT_HOURS: "0"
           # 취소표 알림만 받기 위해 잡 교체 시 시작 알림도 끔
           STARTUP_NOTIFY: "0"

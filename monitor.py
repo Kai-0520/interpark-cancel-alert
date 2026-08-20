@@ -13,7 +13,10 @@
   GOODS_NAME          알림에 표시할 공연 이름
   PLAY_SEQS           감시할 회차, 콤마 구분 (기본: "001,002")
   PLAY_SEQ_LABELS     회차 라벨 JSON (기본: {"001": "9/12(토) 2PM", ...})
-  POLL_INTERVAL       폴링 주기(초, 기본 10)
+  POLL_INTERVAL       평상시 폴링 주기(초, 기본 10)
+  BACKOFF_AFTER       이 횟수만큼 연속 실패하면 백오프 모드 진입 (기본 3)
+  BACKOFF_INTERVAL    백오프 모드의 폴링 주기(초, 기본 300) — 차단이 풀릴 시간을 벌어줌
+  FAILURE_ALERT_AFTER 이 횟수 연속 실패 시 경고 알림 1회 발송 (기본 10)
   MAX_RUNTIME_MIN     이 시간(분)이 지나면 정상 종료. 0 = 무한 (기본 0)
   HEARTBEAT_HOURS     N시간마다 생존 신고 메시지. 0 = 끔 (기본 0)
   STARTUP_NOTIFY      시작 시 첫 조회 결과를 텔레그램으로 발송. 1=켬 (기본 1)
@@ -39,6 +42,8 @@ PLAY_SEQ_LABELS = json.loads(
     os.environ.get("PLAY_SEQ_LABELS", '{"001": "9/12(토) 2PM", "002": "9/12(토) 7PM"}')
 )
 POLL_INTERVAL = float(os.environ.get("POLL_INTERVAL", "10"))
+BACKOFF_AFTER = int(os.environ.get("BACKOFF_AFTER", "3"))
+BACKOFF_INTERVAL = float(os.environ.get("BACKOFF_INTERVAL", "300"))
 MAX_RUNTIME_MIN = float(os.environ.get("MAX_RUNTIME_MIN", "0"))
 HEARTBEAT_HOURS = float(os.environ.get("HEARTBEAT_HOURS", "0"))
 STARTUP_NOTIFY = os.environ.get("STARTUP_NOTIFY", "1") == "1"
@@ -59,7 +64,7 @@ HEADERS = {
 }
 
 # 연속 조회 실패가 이 횟수에 도달하면 한 번만 경고 알림을 보낸다
-FAILURE_ALERT_THRESHOLD = 30
+FAILURE_ALERT_THRESHOLD = int(os.environ.get("FAILURE_ALERT_AFTER", "10"))
 
 
 def log(msg: str) -> None:
@@ -182,15 +187,26 @@ def main() -> int:
 
         if cycle_failed:
             consecutive_failures += 1
+            if consecutive_failures == BACKOFF_AFTER:
+                log(
+                    f"연속 {consecutive_failures}회 실패 → 백오프 모드 진입 "
+                    f"({BACKOFF_INTERVAL:.0f}초 간격으로 찔러보기)"
+                )
             if consecutive_failures >= FAILURE_ALERT_THRESHOLD and not failure_alerted:
                 failure_alerted = True
                 send_telegram(
                     f"⚠️ 모니터 경고: 잔여석 조회가 {consecutive_failures}회 연속 실패 중입니다. "
-                    f"(차단 또는 API 변경 가능성) — {GOODS_NAME}"
+                    f"(차단 또는 API 변경 가능성) {BACKOFF_INTERVAL:.0f}초 간격으로 재시도하며 "
+                    f"복구되면 자동으로 빠른 감시로 돌아갑니다. — {GOODS_NAME}"
                 )
         else:
+            if consecutive_failures >= BACKOFF_AFTER:
+                log(f"조회 성공 → 평상시 간격({POLL_INTERVAL:.0f}초)으로 복귀")
             if failure_alerted:
-                send_telegram(f"✅ 모니터 복구: 잔여석 조회가 다시 정상입니다. — {GOODS_NAME}")
+                send_telegram(
+                    f"✅ 모니터 복구: 잔여석 조회가 다시 정상입니다. "
+                    f"{POLL_INTERVAL:.0f}초 간격 감시 재개. — {GOODS_NAME}"
+                )
             consecutive_failures = 0
             failure_alerted = False
 
@@ -202,7 +218,12 @@ def main() -> int:
             )
             send_telegram(f"💓 모니터 정상 작동 중 — {GOODS_NAME}\n{state_txt}")
 
-        time.sleep(POLL_INTERVAL)
+        # 실패가 이어지면 간격을 넓혀 방화벽 차단이 풀릴 시간을 벌고,
+        # 성공하면 즉시 평상시 간격으로 복귀한다
+        if consecutive_failures >= BACKOFF_AFTER:
+            time.sleep(BACKOFF_INTERVAL)
+        else:
+            time.sleep(POLL_INTERVAL)
 
 
 if __name__ == "__main__":
