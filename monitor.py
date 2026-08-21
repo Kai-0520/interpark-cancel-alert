@@ -16,7 +16,7 @@
   POLL_INTERVAL       평상시 폴링 주기(초, 기본 10)
   BACKOFF_AFTER       이 횟수만큼 연속 실패하면 백오프 모드 진입 (기본 3)
   BACKOFF_INTERVAL    백오프 모드의 폴링 주기(초, 기본 300) — 차단이 풀릴 시간을 벌어줌
-  FAILURE_ALERT_AFTER 이 횟수 연속 실패 시 경고 알림 1회 발송 (기본 10)
+  FAILURE_ALERT_AFTER 이 횟수 연속 실패 시 경고 알림 1회 발송. 0 = 끔 (기본 10)
   MAX_RUNTIME_MIN     이 시간(분)이 지나면 정상 종료. 0 = 무한 (기본 0)
   HEARTBEAT_HOURS     N시간마다 생존 신고 메시지. 0 = 끔 (기본 0)
   STARTUP_NOTIFY      시작 시 첫 조회 결과를 텔레그램으로 발송. 1=켬 (기본 1)
@@ -63,7 +63,7 @@ HEADERS = {
     "Referer": BOOKING_URL,
 }
 
-# 연속 조회 실패가 이 횟수에 도달하면 한 번만 경고 알림을 보낸다
+# 연속 조회 실패가 이 횟수에 도달하면 한 번만 경고 알림을 보낸다 (0이면 경고/복구 알림 끔)
 FAILURE_ALERT_THRESHOLD = int(os.environ.get("FAILURE_ALERT_AFTER", "10"))
 
 
@@ -192,7 +192,11 @@ def main() -> int:
                     f"연속 {consecutive_failures}회 실패 → 백오프 모드 진입 "
                     f"({BACKOFF_INTERVAL:.0f}초 간격으로 찔러보기)"
                 )
-            if consecutive_failures >= FAILURE_ALERT_THRESHOLD and not failure_alerted:
+            if (
+                FAILURE_ALERT_THRESHOLD > 0
+                and consecutive_failures >= FAILURE_ALERT_THRESHOLD
+                and not failure_alerted
+            ):
                 failure_alerted = True
                 send_telegram(
                     f"⚠️ 모니터 경고: 잔여석 조회가 {consecutive_failures}회 연속 실패 중입니다. "

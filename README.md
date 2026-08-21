@@ -50,7 +50,7 @@ Actions 탭 → **ticket-monitor** → **Run workflow** 를 한 번 눌러주면
 | `POLL_INTERVAL` | `10` | 평상시 폴링 주기(초). Actions에서는 30초 사용 |
 | `BACKOFF_AFTER` | `3` | 연속 실패 N회면 백오프 모드 진입 |
 | `BACKOFF_INTERVAL` | `300` | 백오프 모드 폴링 주기(초). 성공하면 즉시 평상시로 복귀 |
-| `FAILURE_ALERT_AFTER` | `10` | 연속 실패 N회에 경고 알림 1회 |
+| `FAILURE_ALERT_AFTER` | `10` | 연속 실패 N회에 경고 알림 1회 (0=끔, Actions 워크플로에서는 꺼둠) |
 | `HEARTBEAT_HOURS` | `0` | N시간마다 생존신고 메시지 (0=끔) |
 | `STARTUP_NOTIFY` | `1` | 시작 시 첫 조회 결과 발송 — 잡이 ~5시간마다 교체되므로 이것이 생존신고 역할 (0=끔) |
 

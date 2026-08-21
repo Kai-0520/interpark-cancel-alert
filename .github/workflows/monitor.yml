@@ -35,6 +35,8 @@ jobs:
           HEARTBEAT_HOURS: "0"
           # 취소표 알림만 받기 위해 잡 교체 시 시작 알림도 끔
           STARTUP_NOTIFY: "0"
+          # 차단이 길어지면 5시간마다 잡이 바뀔 때마다 ⚠️ 경고가 반복 발송됨 → 끔
+          FAILURE_ALERT_AFTER: "0"
         run: python3 monitor.py
 
       # 크론이 누락돼 스크립트가 시간제한으로 정상 종료한 경우,
